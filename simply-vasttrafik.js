@@ -25,8 +25,8 @@ var drawNearestStop = function(stopData, departureObj, pos){
 
 	// Sorting to show shortest time left, first.
 	departures.sort(function(a, b){
-		var aDiffNow = getDiffHourMin(a.rtTime);
-		var bDiffNow = getDiffHourMin(b.rtTime);
+		var aDiffNow = getDiffHourMin((a.rtTime ? a.rtTime : a.time));
+		var bDiffNow = getDiffHourMin((b.rtTime ? b.rtTime : b.time));
 
 		var diff1 = (aDiffNow.hour-bDiffNow.hour) * 60;
 		var diff2 = aDiffNow.minute-bDiffNow.minute;
@@ -40,7 +40,7 @@ var drawNearestStop = function(stopData, departureObj, pos){
 
 	var distance = getDistance(closestPosition, pos);
 	var distanceString = '';
-	// Distance is calculated in km. If more than one km, keep km but round to two decimals. If lower than one km, display as meters
+	// Distance is calculated in km. If more than one km, keep km but round to two decimals. If lower than one km, display as meters.
 	if(distance > 1){
 		distanceString = (Math.round(distance*100) / 100) + 'km';
 	}else{
@@ -54,8 +54,14 @@ var drawNearestStop = function(stopData, departureObj, pos){
 	// Show at most 10 entries. If stop has fewer than 10 to list, use that amount.
 	var nrEntries = Math.min(departures.length, 10);
 	for (var i = 0; i < nrEntries; i++) {
-		var timeDiff = getDiffHourMin(departures[i].rtTime);
-		bodyText += departures[i].name + ' (' + departures[i].direction + '):\n' + (timeDiff.hour !== 0 ? timeDiff.hour + ' h ' : '') + timeDiff.minute + ' min\n';
+		var timeDiff = getDiffHourMin((departures[i].rtTime ? departures[i].rtTime : departures[i].time));
+		var notRealTimePrefix = (departures[i].rtTime ? '' : 'Approx ');
+
+		timeDiff.minute -= 1; // Don't let user feel safe. Better safe than sorry.
+
+		var hourText = (timeDiff.hour > 0 ? timeDiff.hour + ' h ' : '');
+		var minText = (timeDiff.minute > 0 ? timeDiff.minute + ' min' : 'Now');
+		bodyText += departures[i].name + ' (' + departures[i].direction + '):\n' + notRealTimePrefix + hourText + minText + '\n';
 	};
 	
 	// Display and vibe.
@@ -120,7 +126,7 @@ var getDiffHourMin = function(string){
 	var time = string.split(':');
 	change.hour = parseFloat(time[0]) - parseFloat(date.hour);
 	change.minute = parseFloat(time[1]) - parseFloat(date.minute);
-	if(change.minute < 0){
+	if(change.minute < 0 && change.hour > 0){
 		change.hour -= 1;
 		change.minute += 60;
 	}
